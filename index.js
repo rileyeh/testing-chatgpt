@@ -7,7 +7,6 @@ const rl = readline.createInterface({
 
 const playGame = () => {
   const randomNumber = Math.floor(Math.random() * 10) + 1
-  let guessHistory = []
 
   const askQuestion = () => {
     rl.question('Guess a number between 1 and 10: ', (answer) => {
@@ -20,20 +19,14 @@ const playGame = () => {
         console.log('Please enter a number between 1 and 10.')
         askQuestion() // Prompt again
       } else {
-        guessHistory.push(userGuess) // Add guess to history
-
         if (userGuess === randomNumber) {
           console.log('Congratulations! You guessed the correct number!')
-          console.log(`Your guesses: ${guessHistory.join(', ')}`)
-          askPlayAgain() // Ask if they want to play again
         } else {
           console.log(
-            `Sorry, that's not correct. Your guesses so far: ${guessHistory.join(
-              ', '
-            )}`
+            `Sorry, the correct number was ${randomNumber}. Better luck next time!`
           )
-          askQuestion() // Prompt again
         }
+        askPlayAgain() // Ask if they want to play again
       }
     })
   }
