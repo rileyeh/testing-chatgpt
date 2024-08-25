@@ -23,7 +23,8 @@ jobs:
       - name: Get list of changed files
         id: changed_files
         run: |
-          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})" >> $GITHUB_OUTPUT
+          BASE_SHA=$(git merge-base ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          echo "files=$(git diff --name-only $BASE_SHA ${{ github.sha }})" >> $GITHUB_OUTPUT
 
       - name: Review code with ChatGPT
         id: chatgpt_review
