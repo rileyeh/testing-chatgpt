@@ -18,7 +18,9 @@ jobs:
         id: changed_files
         run: |
           # Get the list of changed files between the PR branch and its base branch
-          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})" >> $GITHUB_OUTPUT
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          FILE_LIST=$(printf "%s\n" $FILES | paste -sd "," -)
+          echo "files=$FILE_LIST" >> $GITHUB_OUTPUT
 
       - name: Review code with ChatGPT
         id: chatgpt_review
@@ -27,7 +29,8 @@ jobs:
         run: |
           FILES="${{ steps.changed_files.outputs.files }}"
           RESPONSE=""
-          for FILE in $FILES; do
+          IFS=',' read -ra ADDR <<< "$FILES"
+          for FILE in "${ADDR[@]}"; do
             CODE=$(cat "$FILE")
             PROMPT="Review the following JavaScript code from $FILE in the context of a pull request and provide feedback: $CODE"
             RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
@@ -46,9 +49,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMENTS=$(cat review_comments.txt)
-          if [ -n "$COMMENTS" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENTS"
+          if [ -f review_comments.txt ]; then
+            COMMENTS=$(cat review_comments.txt)
+            if [ -n "$COMMENTS" ]; then
+              gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENTS"
+            else
+              echo "No comments to post."
+            fi
           else
-            echo "No comments to post."
+            echo "No review comments generated."
           fi
