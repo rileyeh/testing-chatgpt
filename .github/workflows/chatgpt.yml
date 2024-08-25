@@ -11,20 +11,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install requests
+          fetch-depth: 2 # Fetch minimal history to include the PR and its base commit
 
       - name: Get list of changed files
         id: changed_files
         run: |
-          BASE_SHA=$(git merge-base ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          echo "files=$(git diff --name-only $BASE_SHA ${{ github.sha }})" >> $GITHUB_OUTPUT
+          # Get the list of changed files between the PR branch and its base branch
+          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})" >> $GITHUB_OUTPUT
 
       - name: Review code with ChatGPT
         id: chatgpt_review
@@ -35,7 +29,7 @@ jobs:
           RESPONSE=""
           for FILE in $FILES; do
             CODE=$(cat "$FILE")
-            PROMPT="Review the following code from $FILE in the context of a pull request and provide feedback: $CODE"
+            PROMPT="Review the following JavaScript code from $FILE in the context of a pull request and provide feedback: $CODE"
             RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer $OPENAI_API_KEY" \
