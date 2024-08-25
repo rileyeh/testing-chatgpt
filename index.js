@@ -7,7 +7,3 @@ function addFive(num) {
 function greeter(name) {
   return `hello ${name}`
 }
-
-function returnArg(arg) {
-  return arg
-}

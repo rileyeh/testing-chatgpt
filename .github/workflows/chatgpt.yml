@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+permissions:
+  pull-requests: write  # This grants the necessary permission to post comments on pull requests
+
 jobs:
   chatgpt-review:
     runs-on: ubuntu-latest
@@ -11,20 +14,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install requests
+          fetch-depth: 2  # Fetch minimal history to include the PR and its base commit
 
       - name: Get list of changed files
         id: changed_files
         run: |
-          BASE_SHA=$(git merge-base ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          echo "files=$(git diff --name-only $BASE_SHA ${{ github.sha }})" >> $GITHUB_OUTPUT
+          # Get the list of changed files between the PR branch and its base branch
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          FILE_LIST=$(printf "%s\n" $FILES | paste -sd "," -)
+          echo "files=$FILE_LIST" >> $GITHUB_OUTPUT
 
       - name: Review code with ChatGPT
         id: chatgpt_review
@@ -33,18 +32,30 @@ jobs:
         run: |
           FILES="${{ steps.changed_files.outputs.files }}"
           RESPONSE=""
-          for FILE in $FILES; do
+          IFS=',' read -ra ADDR <<< "$FILES"
+          for FILE in "${ADDR[@]}"; do
             CODE=$(cat "$FILE")
-            PROMPT="Review the following code from $FILE in the context of a pull request and provide feedback: $CODE"
+            PROMPT="Review the following JavaScript code from $FILE in the context of a pull request and provide feedback."
+            
+            JSON_PAYLOAD=$(cat <<EOF
+{
+  "model": "gpt-4",
+  "messages": [
+    {"role": "system", "content": "You are a code review assistant."},
+    {"role": "user", "content": "${PROMPT}\n\n${CODE}"}
+  ]
+}
+EOF
+)
+
             RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer $OPENAI_API_KEY" \
-              -d '{
-                "model": "gpt-4",
-                "messages": [{"role": "system", "content": "You are a code review assistant."},
-                             {"role": "user", "content": "'"${PROMPT}"'"}]
-              }')
+              -d "$JSON_PAYLOAD")
+              
+            echo "Full API Response: $RESPONSE"
             COMMENT=$(echo $RESPONSE | jq -r '.choices[0].message.content')
+            echo "Extracted Comment: $COMMENT"
             echo "$COMMENT" >> review_comments.txt
           done
 
@@ -52,9 +63,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMENTS=$(cat review_comments.txt)
-          if [ -n "$COMMENTS" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENTS"
+          if [ -f review_comments.txt ]; then
+            COMMENTS=$(cat review_comments.txt)
+            if [ -n "$COMMENTS" ]; then
+              gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENTS"
+            else
+              echo "No comments to post."
+            fi
           else
-            echo "No comments to post."
+            echo "No review comments generated."
           fi
