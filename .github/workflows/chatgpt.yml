@@ -42,9 +42,11 @@ jobs:
               -d '{
                 "model": "gpt-4",
                 "messages": [{"role": "system", "content": "You are a code review assistant."},
-                             {"role": "user", "content": "'"${PROMPT}"'"}]
+                            {"role": "user", "content": "'"${PROMPT}"'"}]
               }')
+            echo "Full API Response: $RESPONSE"
             COMMENT=$(echo $RESPONSE | jq -r '.choices[0].message.content')
+            echo "Extracted Comment: $COMMENT"
             echo "$COMMENT" >> review_comments.txt
           done
 
