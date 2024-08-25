@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize]
 
 permissions:
-  pull-requests: write  # This grants the necessary permission to post comments on pull requests
+  pull-requests: write # This grants the necessary permission to post comments on pull requests
 
 jobs:
   chatgpt-review:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 2  # Fetch minimal history to include the PR and its base commit
+          fetch-depth: 2 # Fetch minimal history to include the PR and its base commit
 
       - name: Get list of changed files
         id: changed_files
@@ -38,15 +38,15 @@ jobs:
             PROMPT="Review the following JavaScript code from $FILE in the context of a pull request and provide feedback."
             
             JSON_PAYLOAD=$(cat <<EOF
-{
-  "model": "gpt-4",
-  "messages": [
-    {"role": "system", "content": "You are a code review assistant."},
-    {"role": "user", "content": "${PROMPT}\n\n${CODE}"}
-  ]
-}
-EOF
-)
+              {
+                "model": "gpt-4",
+                "messages": [
+                  {"role": "system", "content": "You are a code review assistant."},
+                  {"role": "user", "content": "${PROMPT}\n\n${CODE}"}
+                ]
+              }
+              EOF
+              )
             
             RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
               -H "Content-Type: application/json" \
