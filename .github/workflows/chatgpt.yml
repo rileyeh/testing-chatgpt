@@ -14,9 +14,8 @@ jobs:
 
     steps:
       - name: The Code Reviewer
-        uses: fitomad/github-chatgpt-integration@v1.0
+        uses: rileyeh/github-chatgpt-integration@main
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-pr-id: ${{ github.event.number }}
-          dev-lang: Javascript
